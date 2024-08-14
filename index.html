@@ -1,0 +1,442 @@
+<html><head><base href="https://architecturesim.com/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Architecture Simulator - With Print Functionality</title>
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  #canvas {
+    background-color: #87CEEB;
+    border: 1px solid #ccc;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  
+  #controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  
+  button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  
+  #options {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  select, input {
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+    transition: all 0.3s;
+  }
+  
+  select:hover, input:hover {
+    border-color: #4CAF50;
+  }
+  
+  #complexity {
+    width: 100px;
+  }
+  
+  #info {
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    max-width: 600px;
+    text-align: center;
+  }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #canvas, #canvas * {
+      visibility: visible;
+    }
+    #canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+  }
+</style>
+<script type="text/javascript" nonce="9353af7a043347729a43834c508" src="//local.adguard.org?ts=1723452792512&amp;type=content-script&amp;dmn=party.websim.ai&amp;url=https%3A%2F%2Fparty.websim.ai%2Fapi%2Fv1%2Fsites%2FSpyfzuaOnLis0U0Uh%2Fhtml%3Fraw%3Dtrue&amp;app=com.google.Chrome&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
+<script type="text/javascript" nonce="9353af7a043347729a43834c508" src="//local.adguard.org?ts=1723452792512&amp;name=AdGuard%20Assistant&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
+<body>
+  <h1>Advanced Architecture Simulator - With Print Functionality</h1>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <div id="controls">
+    <button id="generateBtn">Generate Complex Building</button>
+    <button id="addTreesBtn">Add Trees</button>
+    <button id="addVehiclesBtn">Add Vehicles</button>
+    <button id="printBtn">Print Building</button>
+  </div>
+  <div id="options">
+    <select id="style">
+      <option value="modern">Modern</option>
+      <option value="classical">Classical</option>
+      <option value="brutalist">Brutalist</option>
+      <option value="futuristic">Futuristic</option>
+      <option value="mixed">Mixed</option>
+    </select>
+    <select id="floors">
+      <option value="1">1 Floor</option>
+      <option value="2">2 Floors</option>
+      <option value="3">3 Floors</option>
+      <option value="4">4 Floors</option>
+      <option value="5">5+ Floors</option>
+    </select>
+    <select id="material">
+      <option value="concrete">Concrete</option>
+      <option value="glass">Glass</option>
+      <option value="brick">Brick</option>
+      <option value="wood">Wood</option>
+      <option value="mixed">Mixed</option>
+    </select>
+    <select id="time">
+      <option value="day">Day</option>
+      <option value="sunset">Sunset</option>
+      <option value="night">Night</option>
+    </select>
+    <input type="range" id="complexity" min="1" max="10" value="5">
+    <label for="complexity">Complexity</label>
+  </div>
+  <div id="info"></div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const generateBtn = document.getElementById('generateBtn');
+const addTreesBtn = document.getElementById('addTreesBtn');
+const addVehiclesBtn = document.getElementById('addVehiclesBtn');
+const printBtn = document.getElementById('printBtn');
+const styleSelect = document.getElementById('style');
+const floorsSelect = document.getElementById('floors');
+const materialSelect = document.getElementById('material');
+const timeSelect = document.getElementById('time');
+const complexitySlider = document.getElementById('complexity');
+const infoDiv = document.getElementById('info');
+
+let currentBuilding = null;
+let trees = [];
+let vehicles = [];
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function setBackground() {
+  const time = timeSelect.value;
+  let gradient;
+  
+  if (time === 'day') {
+    gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(1, '#E0F6FF');
+  } else if (time === 'sunset') {
+    gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#FF7F50');
+    gradient.addColorStop(0.5, '#FFD700');
+    gradient.addColorStop(1, '#87CEEB');
+  } else if (time === 'night') {
+    gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#191970');
+    gradient.addColorStop(1, '#4B0082');
+  }
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawBuilding(x, y, width, height, style, material) {
+  ctx.fillStyle = getBuildingColor(material);
+  ctx.fillRect(x, y, width, height);
+  
+  const floors = parseInt(floorsSelect.value);
+  const floorHeight = height / floors;
+  
+  for (let i = 1; i < floors; i++) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + i * floorHeight);
+    ctx.lineTo(x + width, y + i * floorHeight);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.stroke();
+  }
+  
+  drawWindows(x, y, width, height, style, floors);
+  drawRoof(x, y, width, height, style);
+}
+
+function getBuildingColor(material) {
+  switch (material) {
+    case 'concrete': return '#C0C0C0';
+    case 'glass': return 'rgba(173, 216, 230, 0.7)';
+    case 'brick': return '#B22222';
+    case 'wood': return '#8B4513';
+    case 'mixed': return ['#C0C0C0', 'rgba(173, 216, 230, 0.7)', '#B22222', '#8B4513'][Math.floor(Math.random() * 4)];
+    default: return '#C0C0C0';
+  }
+}
+
+function drawWindows(x, y, width, height, style, floors) {
+  const windowRows = floors;
+  const windowCols = Math.floor(width / 30);
+  const windowWidth = width / (windowCols * 2);
+  const windowHeight = height / (windowRows * 3);
+  
+  for (let row = 0; row < windowRows; row++) {
+    for (let col = 0; col < windowCols; col++) {
+      const windowX = x + (col * 2 + 1) * windowWidth;
+      const windowY = y + (row * 3 + 1) * windowHeight;
+      
+      if (windowX < x + width && windowY < y + height) {
+        ctx.fillStyle = getWindowColor(style);
+        ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
+      }
+    }
+  }
+}
+
+function getWindowColor(style) {
+  switch (style) {
+    case 'modern': return 'rgba(173, 216, 230, 0.8)';
+    case 'classical': return 'rgba(255, 255, 255, 0.8)';
+    case 'brutalist': return 'rgba(105, 105, 105, 0.8)';
+    case 'futuristic': return 'rgba(0, 255, 255, 0.8)';
+    case 'mixed': return ['rgba(173, 216, 230, 0.8)', 'rgba(255, 255, 255, 0.8)', 'rgba(105, 105, 105, 0.8)', 'rgba(0, 255, 255, 0.8)'][Math.floor(Math.random() * 4)];
+    default: return 'rgba(173, 216, 230, 0.8)';
+  }
+}
+
+function drawRoof(x, y, width, height, style) {
+  ctx.beginPath();
+  
+  switch (style) {
+    case 'modern':
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + width, y);
+      ctx.lineTo(x + width * 0.8, y - height * 0.1);
+      ctx.lineTo(x + width * 0.2, y - height * 0.1);
+      break;
+    case 'classical':
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + width / 2, y - height * 0.2);
+      ctx.lineTo(x + width, y);
+      break;
+    case 'brutalist':
+      ctx.rect(x, y - height * 0.05, width, height * 0.05);
+      break;
+    case 'futuristic':
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + width / 2, y - height * 0.15);
+      ctx.lineTo(x + width, y);
+      ctx.lineTo(x + width * 0.75, y - height * 0.1);
+      ctx.lineTo(x + width * 0.25, y - height * 0.1);
+      break;
+    case 'mixed':
+      const roofStyles = [drawRoof.bind(null, x, y, width, height, 'modern'),
+                          drawRoof.bind(null, x, y, width, height, 'classical'),
+                          drawRoof.bind(null, x, y, width, height, 'brutalist'),
+                          drawRoof.bind(null, x, y, width, height, 'futuristic')];
+      roofStyles[Math.floor(Math.random() * roofStyles.length)]();
+      return;
+  }
+  
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fill();
+}
+
+function generateComplexBuilding() {
+  setBackground();
+  
+  const style = styleSelect.value;
+  const material = materialSelect.value;
+  const complexity = parseInt(complexitySlider.value);
+  
+  const mainBuildingWidth = randomInt(200, 400);
+  const mainBuildingHeight = randomInt(300, 500);
+  const mainBuildingX = (canvas.width - mainBuildingWidth) / 2;
+  const mainBuildingY = canvas.height - mainBuildingHeight;
+  
+  drawBuilding(mainBuildingX, mainBuildingY, mainBuildingWidth, mainBuildingHeight, style, material);
+  
+  for (let i = 0; i < complexity; i++) {
+    const subBuildingWidth = randomInt(50, 150);
+    const subBuildingHeight = randomInt(100, 300);
+    const subBuildingX = randomInt(0, canvas.width - subBuildingWidth);
+    const subBuildingY = canvas.height - subBuildingHeight;
+    
+    if (!isOverlapping(subBuildingX, subBuildingY, subBuildingWidth, subBuildingHeight, mainBuildingX, mainBuildingY, mainBuildingWidth, mainBuildingHeight)) {
+      drawBuilding(subBuildingX, subBuildingY, subBuildingWidth, subBuildingHeight, style, material);
+    }
+  }
+  
+  trees = [];
+  vehicles = [];
+  
+  currentBuilding = {
+    mainBuilding: { x: mainBuildingX, y: mainBuildingY, width: mainBuildingWidth, height: mainBuildingHeight },
+    style: style,
+    material: material,
+    complexity: complexity
+  };
+  
+  updateInfo();
+}
+
+function isOverlapping(x1, y1, w1, h1, x2, y2, w2, h2) {
+  return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+}
+
+function addTrees() {
+  if (!currentBuilding) return;
+  
+  const treeCount = randomInt(3, 10);
+  
+  for (let i = 0; i < treeCount; i++) {
+    const treeX = randomInt(0, canvas.width);
+    const treeY = randomInt(canvas.height - 100, canvas.height);
+    const treeSize = randomInt(30, 60);
+    
+    if (!isOverlapping(treeX, treeY - treeSize, treeSize, treeSize, currentBuilding.mainBuilding.x, currentBuilding.mainBuilding.y, currentBuilding.mainBuilding.width, currentBuilding.mainBuilding.height)) {
+      trees.push({ x: treeX, y: treeY, size: treeSize });
+    }
+  }
+  
+  redrawScene();
+}
+
+function drawTree(x, y, size) {
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(x - size/8, y - size, size/4, size);
+  
+  ctx.beginPath();
+  ctx.moveTo(x, y - size);
+  ctx.lineTo(x - size/2, y - size/2);
+  ctx.lineTo(x + size/2, y - size/2);
+  ctx.closePath();
+  ctx.fillStyle = '#228B22';
+  ctx.fill();
+}
+
+function addVehicles() {
+  if (!currentBuilding) return;
+  
+  const vehicleCount = randomInt(2, 5);
+  
+  for (let i = 0; i < vehicleCount; i++) {
+    const vehicleWidth = randomInt(40, 60);
+    const vehicleHeight = randomInt(20, 30);
+    const vehicleX = randomInt(0, canvas.width - vehicleWidth);
+    const vehicleY = canvas.height - vehicleHeight - randomInt(5, 20);
+    
+    if (!isOverlapping(vehicleX, vehicleY, vehicleWidth, vehicleHeight, currentBuilding.mainBuilding.x, currentBuilding.mainBuilding.y, currentBuilding.mainBuilding.width, currentBuilding.mainBuilding.height)) {
+      vehicles.push({ x: vehicleX, y: vehicleY, width: vehicleWidth, height: vehicleHeight });
+    }
+  }
+  
+  redrawScene();
+}
+
+function drawVehicle(x, y, width, height) {
+  ctx.fillStyle = ['#FF0000', '#0000FF', '#FFFF00', '#00FF00', '#FFA500'][Math.floor(Math.random() * 5)];
+  ctx.fillRect(x, y, width, height);
+  
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(x + width * 0.1, y + height * 0.3, width * 0.3, height * 0.4);
+  ctx.fillRect(x + width * 0.6, y + height * 0.3, width * 0.3, height * 0.4);
+  
+  ctx.beginPath();
+  ctx.arc(x + width * 0.25, y + height, height * 0.3, 0, Math.PI * 2);
+  ctx.arc(x + width * 0.75, y + height, height * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = '#333333';
+  ctx.fill();
+}
+
+function redrawScene() {
+  setBackground();
+  
+  if (currentBuilding) {
+    drawBuilding(currentBuilding.mainBuilding.x, currentBuilding.mainBuilding.y, currentBuilding.mainBuilding.width, currentBuilding.mainBuilding.height, currentBuilding.style, currentBuilding.material);
+  }
+  
+  trees.forEach(tree => drawTree(tree.x, tree.y, tree.size));
+  vehicles.forEach(vehicle => drawVehicle(vehicle.x, vehicle.y, vehicle.width, vehicle.height));
+}
+
+function updateInfo() {
+  if (!currentBuilding) return;
+  
+  infoDiv.innerHTML = `
+    <h3>Building Information</h3>
+    <p>Style: ${currentBuilding.style}</p>
+    <p>Material: ${currentBuilding.material}</p>
+    <p>Complexity: ${currentBuilding.complexity}</p>
+    <p>Trees: ${trees.length}</p>
+    <p>Vehicles: ${vehicles.length}</p>
+  `;
+}
+
+function printCanvas() {
+  const dataUrl = canvas.toDataURL('image/png');
+  const windowContent = '<!DOCTYPE html>';
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.open();
+  printWindow.document.write(windowContent);
+  printWindow.document.write('<html><head><title>Print Building</title></head><body>');
+  printWindow.document.write('<img src="' + dataUrl + '" style="width:100%;">');
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.print();
+}
+
+generateBtn.addEventListener('click', generateComplexBuilding);
+addTreesBtn.addEventListener('click', addTrees);
+addVehiclesBtn.addEventListener('click', addVehicles);
+printBtn.addEventListener('click', printCanvas);
+styleSelect.addEventListener('change', generateComplexBuilding);
+floorsSelect.addEventListener('change', generateComplexBuilding);
+materialSelect.addEventListener('change', generateComplexBuilding);
+timeSelect.addEventListener('change', generateComplexBuilding);
+complexitySlider.addEventListener('input', generateComplexBuilding);
+
+// Generate initial complex building
+generateComplexBuilding();
+</script>
+</body></html>
